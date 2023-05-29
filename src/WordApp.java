@@ -1,0 +1,285 @@
+//package skeletonCodeAssgnmt2;
+
+import javax.swing.*;
+
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+
+import java.io.File;
+
+import java.util.Scanner;
+import java.util.concurrent.*;
+//model is separate from the view.
+/**
+* WordApp class for creating the Graphical User Interface and initializing the WordDictionary
+*/
+public class WordApp {
+//shared variables
+	static int noWords=4;
+	static int totalWords;
+
+   	static int frameX=1000;
+	static int frameY=600;
+	static int yLimit=480;
+   public static JButton startB, endB, quitB;
+   
+   
+
+	static WordDictionary dict = new WordDictionary(); //use default dictionary, to read from file eventually
+
+	static WordRecord[] words;
+	static volatile boolean done;  //must be volatile
+	static Score score = new Score();
+
+	static WordPanel w;
+   static JLabel missed; 
+   static JLabel caught;
+   static JLabel scr;  
+   public static Thread thread;
+    
+	private static final int fps = 25;
+   private static final int fallingSpeed = 3;
+	public static void music(){
+        //AudioPlayer MGP = AudioPlayer.player;
+        
+
+	   try{
+	   	
+	   	File music = new File("../skeletonCodeAssgnmt2/bin/wronganswer.mp3");
+	   	AudioInputStream audioInput = AudioSystem.getAudioInputStream(music);
+	   	Clip clip = AudioSystem.getClip();
+	   	clip.open(audioInput);
+	   	clip.start();
+	   	clip.loop(Clip.LOOP_CONTINUOUSLY);
+	   	JOptionPane.showMessageDialog(null,"Click to stop sound");
+	   }
+	   catch(Exception i){}
+        
+        
+
+        }
+	/**
+   *Void Method for creating the GUI
+   */
+	public static void setupGUI(int frameX,int frameY,int yLimit) {
+		// Frame init and dimensions
+    	JFrame frame = new JFrame("WordGame"); 
+    	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    	frame.setSize(frameX, frameY);
+      JPanel g = new JPanel();
+      g.setLayout(new BoxLayout(g, BoxLayout.PAGE_AXIS)); 
+      g.setSize(frameX,frameY);
+    	
+		w = new WordPanel(words,yLimit);
+		w.setSize(frameX,yLimit+100);
+	   g.add(w); 
+	    
+      JPanel txt = new JPanel();
+      txt.setLayout(new BoxLayout(txt, BoxLayout.LINE_AXIS)); 
+      caught =new JLabel("Caught: " + score.getCaught() + "    ");
+      missed =new JLabel("Missed:" + score.getMissed()+ "    ");
+      scr =new JLabel("Score:" + score.getScore()+ "    ");    
+      txt.add(caught);
+	   txt.add(missed);
+	   txt.add(scr);
+    
+	    //[snip]
+  
+	   final JTextField textEntry = new JTextField("",20);
+	   textEntry.addActionListener(new ActionListener()
+	   {
+	      public void actionPerformed(ActionEvent evt) {
+	         String text = textEntry.getText();
+	          //[snip]
+	         textEntry.setText("");
+	         textEntry.requestFocus();
+            //iterating through the words and checking whether it is caught by the textfield
+            for(int i =0; i<words.length;i++){
+               if(words[i].matchWord(text)){
+                  
+                  int length = text.length();
+                  score.caughtWord(length);
+                  caught.setText("Caught:"+WordApp.score.getCaught()+" ");
+                  scr.setText("Score:" + score.getScore()+" ");
+               }
+            }
+	      }
+	   });
+	   
+	   txt.add(textEntry);
+	   txt.setMaximumSize( txt.getPreferredSize() );
+	   g.add(txt);
+	    
+	   JPanel b = new JPanel();
+      b.setLayout(new BoxLayout(b, BoxLayout.LINE_AXIS)); 
+	   startB = new JButton("Start");
+      endB = new JButton("End");
+      endB.setEnabled(false);// disable the button so that it cannot be pressed if there is no game happening
+		
+			// add the listener to the jbutton to handle the "pressed" event
+		startB.addActionListener(new ActionListener()
+		{
+		   public void actionPerformed(ActionEvent e)
+		   {
+		      //[snip]
+            startB.setEnabled(false); // disabling the button when clicked
+		      textEntry.requestFocus();  //return focus to the text entry field
+            
+            endB.setEnabled(true);
+            
+            
+            
+            thread = new Thread(w);
+            WordPanel.done=false;
+            thread.start();
+            
+            //repaint();
+		   }
+		});
+		
+			
+				// add the listener to the jbutton to handle the "pressed" event
+		endB.addActionListener(new ActionListener()
+		{
+		   public void actionPerformed(ActionEvent e)
+		   {
+		      
+            //[snip]
+            try{
+               //thread.interrupt();
+               WordPanel.done=true;
+               startB.setEnabled(true);
+               //w.pauseGame();
+               //w.reset();
+               for(int i =0;i<words.length;i++){
+                 words[i].resetWord();
+               }
+               score.resetScore();
+               missed.setText("Missed:"+WordApp.score.getMissed()+"    ");
+               caught.setText("Caught: "+WordApp.score.getCaught()+"    ");
+               scr.setText("Score:" + score.getScore()+"    ");
+               
+               
+            }
+            catch(Exception a){}
+            
+            
+            
+		   }
+		});
+      quitB = new JButton("Quit");
+		
+      quitB.addActionListener(new ActionListener(){
+         public void actionPerformed(ActionEvent e){
+            
+            System.exit(0);
+         }
+      });
+      JButton change = new JButton("Pick a colour");
+      change.addActionListener(new ActionListener(){
+      	 public void actionPerformed(ActionEvent o){
+      	 	if(o.getSource()==change){
+      	 		JColorChooser color = new JColorChooser();
+      	 		Color c = JColorChooser.showDialog(null,"Pick a color",Color.black);
+      	 		frame.setBackground(c);
+      	 	}
+      	 }
+      });
+      
+      JButton increaseDiff = new JButton("Level+");
+      increaseDiff.addActionListener(new ActionListener(){
+      	public void actionPerformed(ActionEvent e){
+      		w.speed-= 75;
+      	}
+      });
+      
+      JButton decreaseDiff = new JButton("Level-");
+      decreaseDiff.addActionListener(new ActionListener(){
+        public void actionPerformed(ActionEvent e){
+                w.speed+= 75;
+        }
+      });
+
+		b.add(startB);
+		b.add(endB);
+		b.add(quitB);
+		b.add(increaseDiff);
+		b.add(decreaseDiff);
+		b.add(change);
+		//b.add(playSound);
+		g.add(b);
+    	
+      frame.setLocationRelativeTo(null);  // Center window on screen.
+      frame.add(g); //add contents to window
+      frame.setContentPane(g);     
+       	//frame.pack();  // don't do this - packs it into small space
+      frame.setVisible(true);
+	}
+  
+   /**
+   * Method for generating the dictonary of words from the file provided by the user
+   * @param filename
+   * @return array of words
+   */
+   public static String[] getDictFromFile(String filename) {
+		String [] dictStr = null;
+		try {
+			Scanner dictReader = new Scanner(new FileInputStream(filename));
+			int dictLength = dictReader.nextInt();
+			//System.out.println("read '" + dictLength+"'");
+
+			dictStr=new String[dictLength];
+			for (int i=0;i<dictLength;i++) {
+				dictStr[i]=new String(dictReader.next());
+				//System.out.println(i+ " read '" + dictStr[i]+"'"); //for checking
+			}
+			dictReader.close();
+		} catch (IOException e) {
+	        System.err.println("Problem reading file " + filename + " default dictionary will be used");
+	    }
+		return dictStr;
+	}
+
+   /**
+   * Main method for running the game
+   */
+	public static void main(String[] args) {
+    	
+		//deal with command line arguments
+      System.setProperty("sun.java2d.opengl","true");
+      totalWords=Integer.parseInt(args[0]);  //total words to fall
+		noWords=Integer.parseInt(args[1]); // total words falling at any point
+		assert(totalWords>=noWords); // this could be done more neatly
+      String[] tmpDict=getDictFromFile("../skeletonCodeAssgnmt2/bin/"+args[2]); //file of words
+		if (tmpDict!=null)
+			dict= new WordDictionary(tmpDict);
+		
+		WordRecord.dict=dict; //set the class dictionary for the words.
+		
+		words = new WordRecord[noWords];  //shared array of current words
+		
+		//[snip]
+		
+		setupGUI(frameX, frameY, yLimit);  
+    	//Start WordPanel thread - for redrawing animation
+
+		int x_inc=(int)frameX/noWords;
+	  	//initialize shared array of current words
+
+		for (int i=0;i<noWords;i++) {
+			words[i]=new WordRecord(dict.getNewWord(),i*x_inc,yLimit);
+		}
+      
+      //Thread t = new Thread(w);
+      
+      //t.start();
+      music();
+	}
+}
