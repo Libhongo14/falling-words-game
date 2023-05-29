@@ -11,3 +11,9 @@ user sees which is the User interface. The Controller controls the flow of data 
 created in the model, so as to update the user interface. The document will provide a description of all 
 classes used; description of the java concurrency features used. Explanation of how the system was 
 validated and debugged and also additional features that are used.
+
+To run on the command line directory:
+	first run make clean to clean the bin directory
+	secondly run make to compile the files
+        thirdly run java -cp bin WordApp <totalWords> <NoOfWords falling>
+	For running another textfile make sure that it is in the bin directory first
